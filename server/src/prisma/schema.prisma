@@ -7,3 +7,123 @@ datasource db {
 generator client {
   provider = "prisma-client-js"
 }
+
+// User model with enhanced data types and relationships
+model User {
+  id               UUID    @id @default(uuid())
+  armyNo           String?
+  unit             String?
+  rank             String?
+  dateOfCommission Date?
+  firstName        String
+  middleName       String?
+  lastName         String
+  email            Email   @unique
+  mobileNo         String? @unique
+  dob              Date?
+
+  // Role as a separate model for better organization
+  role   Role @relation(fields: [roleId], references: [id])
+  roleId Int  @unique
+
+  // One-to-one relationship with Patient (optional)
+  patient Patient? @relation(fields: [id], references: [userId])
+}
+
+// Role model for user access control
+enum Role {
+  ADMIN
+  DOCTOR
+  NURSE
+  PATIENT
+}
+
+// Patient model with improved relationships and data types
+model Patient {
+  id     UUID  @id @default(uuid())
+  userId UUID? @unique
+  user   User? @relation(fields: [userId], references: [id])
+
+  // Many-to-many relationship with Medical records
+  medical   Medical[] @relation(fields: [patientId], references: [id])
+  patientId Int[]
+
+  // Many-to-many relationship with Tests
+  test      Test[] @relation(fields: [patientId], references: [id])
+  patientId Int[]
+}
+
+// Doctor model with relationships
+model Doctor {
+  id     String @id @default(uuid())
+  userId UUID   @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  specialization String
+  department     Department? @relation(fields: [departmentId], references: [id])
+  departmentId   String?
+}
+
+// Department model
+model Department {
+  id       String  @id @default(uuid())
+  name     String
+  location String?
+
+  // One-to-many relationship with Doctors
+  doctors Doctor[] @relation(fields: [id], references: [departmentId])
+}
+
+// Medical record model with relationships and enhanced data types
+model Medical {
+  id            String  @id @default(uuid())
+  heightCm      Int?
+  weightKg      Float?
+  BMI           Float?
+  chest         Int?
+  waist         Int?
+  bloodPressure String?
+  disabilities  String?
+  bloodGroup    String?
+  onDrug        Boolean
+  date          Date?
+
+  // One-to-many relationship with Treatments
+  treatments Treatment[] @relation(fields: [medicalId], references: [id])
+  medicalId  Int[]
+
+  // Many-to-many relationship with Tests
+  test      Test[] @relation(fields: [medicalId], references: [id])
+  medicalId Int[]
+
+  // One-to-many relationship with Patient
+  patient   Patient @relation(fields: [patientId], references: [id])
+  patientId UUID    @unique
+}
+
+// Treatment model with relationships
+model Treatment {
+  id          String @id @default(uuid())
+  description String
+  doctor      Doctor @relation(fields: [doctorId], references: [id])
+  doctorId    String
+
+  // Many-to-many relationship with Medications
+  medications Medication[] @relation(fields: [treatmentId], references: [id])
+  treatmentId Int[]
+
+  // Many-to-many relationship with Tests
+  test        Test[] @relation(fields: [treatmentId], references: [id])
+  treatmentId Int[]
+}
+
+// Test model with relationships
+model Test {
+  id       String @id @default(uuid())
+  date     Date
+  testFor  String
+  imageUrl String @db(name: "imageUrl") // Explicit column naming for clarity
+  result   String
+
+  // Many-to-many relationships with Medical records and Treatments (through ame & pme models)
+}
