@@ -1,7 +1,6 @@
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -10,27 +9,25 @@ generator client {
 
 // User model with enhanced data types and relationships
 model User {
-  id               UUID    @id @default(uuid())
+  id               String    @id @default(uuid())
   armyNo           String?
   unit             String?
   rank             String?
-  dateOfCommission Date?
+  dateOfCommission DateTime?
   firstName        String
   middleName       String?
   lastName         String
-  email            Email   @unique
-  mobileNo         String? @unique
-  dob              Date?
+  email            String    @unique
+  mobileNo         String?   @unique
+  dob              DateTime?
 
-  // Role as a separate model for better organization
-  role   Role @relation(fields: [roleId], references: [id])
-  roleId Int  @unique
-
-  // One-to-one relationship with Patient (optional)
-  patient Patient? @relation(fields: [id], references: [userId])
+  // Direct use of enum for role without relation
+  role   Role    
+  patient Patient?
+  //deoctors Doctor[]
 }
 
-// Role model for user access control
+// Enum for user roles, not used for relations
 enum Role {
   ADMIN
   DOCTOR
@@ -38,45 +35,20 @@ enum Role {
   PATIENT
 }
 
-// Patient model with improved relationships and data types
 model Patient {
-  id     UUID  @id @default(uuid())
-  userId UUID? @unique
-  user   User? @relation(fields: [userId], references: [id])
+  id     String  @id @default(uuid())
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
 
-  // Many-to-many relationship with Medical records
-  medical   Medical[] @relation(fields: [patientId], references: [id])
-  patientId Int[]
-
-  // Many-to-many relationship with Tests
-  test      Test[] @relation(fields: [patientId], references: [id])
-  patientId Int[]
+  medicalRecords MedicalRecord[]
+  ames ame[]
+  pmes pme[]
+  treatments Treatment[]
+  tests          Test[]
 }
 
-// Doctor model with relationships
-model Doctor {
-  id     String @id @default(uuid())
-  userId UUID   @unique
-  user   User   @relation(fields: [userId], references: [id])
-
-  specialization String
-  department     Department? @relation(fields: [departmentId], references: [id])
-  departmentId   String?
-}
-
-// Department model
-model Department {
-  id       String  @id @default(uuid())
-  name     String
-  location String?
-
-  // One-to-many relationship with Doctors
-  doctors Doctor[] @relation(fields: [id], references: [departmentId])
-}
-
-// Medical record model with relationships and enhanced data types
-model Medical {
-  id            String  @id @default(uuid())
+model MedicalRecord {
+  id            String    @id @default(uuid())
   heightCm      Int?
   weightKg      Float?
   BMI           Float?
@@ -86,44 +58,88 @@ model Medical {
   disabilities  String?
   bloodGroup    String?
   onDrug        Boolean
-  date          Date?
+  date          DateTime?
 
-  // One-to-many relationship with Treatments
-  treatments Treatment[] @relation(fields: [medicalId], references: [id])
-  medicalId  Int[]
-
-  // Many-to-many relationship with Tests
-  test      Test[] @relation(fields: [medicalId], references: [id])
-  medicalId Int[]
-
-  // One-to-many relationship with Patient
+  patientId String @default("27c57ab0-8e7c-4368-b22d-c2db71b316f9")
   patient   Patient @relation(fields: [patientId], references: [id])
-  patientId UUID    @unique
+  ames ame[]
+  pmes pme[]
+  treatments Treatment[]
+  tests Test[]
 }
 
-// Treatment model with relationships
 model Treatment {
-  id          String @id @default(uuid())
-  description String
-  doctor      Doctor @relation(fields: [doctorId], references: [id])
-  doctorId    String
+  id          String    @id @default(uuid())
+  presentmedication String
+  pastmedication String
+  pasthospitalisation String
+  significantpasthistory String
+  knownallergies String
+  miscellaneous String
+  //doctorId    String
+  //doctor      Doctor    @relation(fields: [doctorId], references: [id])
 
-  // Many-to-many relationship with Medications
-  medications Medication[] @relation(fields: [treatmentId], references: [id])
-  treatmentId Int[]
+  patientId String @default("27c57ab0-8e7c-4368-b22d-c2db71b316f9")
+  patient   Patient @relation(fields: [patientId], references: [id])
 
-  // Many-to-many relationship with Tests
-  test        Test[] @relation(fields: [treatmentId], references: [id])
-  treatmentId Int[]
+  medicalRecords MedicalRecord[]
+  tests          Test[]
 }
 
-// Test model with relationships
+// model Doctor {
+//   id             String    @id @default(uuid())
+//   userId         String    @unique
+//   user           User      @relation(fields: [userId], references: [id])
+//   specialization String
+//   departmentId   String?
+//   department     Department? @relation(fields: [departmentId], references: [id])
+//   treatments Treatment[]
+// }
+
+model Department {
+  id       String    @id @default(uuid())
+  name     String
+  location String?
+
+  //doctors Doctor[]
+}
 model Test {
-  id       String @id @default(uuid())
-  date     Date
+  id       String   @id @default(uuid())
+  date     DateTime
   testFor  String
-  imageUrl String @db(name: "imageUrl") // Explicit column naming for clarity
+  imageUrl String   @map("image_url")  // Correct attribute for mapping database column names
   result   String
 
-  // Many-to-many relationships with Medical records and Treatments (through ame & pme models)
+  medicalRecords MedicalRecord[]
+  treatments     Treatment[]
+  patients Patient[]
+  ameid String
+  ame ame @relation(fields: [ameid], references:[ameid])
+  pmeid String
+  pme pme @relation(fields: [pmeid], references:[pmeid])
+
+}
+
+
+model ame {
+   ameid    String  @id @default(uuid())
+MedicalRecord   MedicalRecord  @relation(fields: [ameid], references: [id])
+
+patientId String @default("27c57ab0-8e7c-4368-b22d-c2db71b316f9")
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+description  String
+tests Test[]
+}
+
+model pme {
+  pmeid     String  @id @default(uuid())
+
+ MedicalRecord   MedicalRecord   @relation(fields: [pmeid], references: [id])
+
+ patientId String @default("27c57ab0-8e7c-4368-b22d-c2db71b316f9")
+  patient   Patient @relation(fields: [patientId], references: [id])
+
+ description  String
+ tests Test[]
 }
